@@ -235,7 +235,17 @@ let lastPayment=null;
 
 function fmt(n){return Number(n).toLocaleString('en-IN');}
 function ml(m){const[y,mo]=m.split('-');return MO[parseInt(mo)-1]+' '+y;}
-function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+function toast(msg, type='success'){
+  const t=document.getElementById('toast');
+  t.textContent = msg;
+  if(type === 'error'){
+    t.style.background = '#C0392B';
+  } else {
+    t.style.background = '#1A5C3A';
+  }
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
 
 async function api(path,method='GET',body=null){
   const opts={method,headers:{'Content-Type':'application/json'}};
@@ -412,14 +422,54 @@ async function updatePaymentCalc(){
   }else prev.style.display='none';
 }
 async function savePayment(){
-  const hid=parseInt(document.getElementById('p-house').value);
-  const month=document.getElementById('p-month').value;
-  const date=document.getElementById('p-date').value;
-  if(!hid||!month||!date){alert('Please fill all fields.');return;}
-  const interest=parseFloat(document.getElementById('p-interest').value)||0;
-  const p=await api('/api/payments','POST',{house_id:hid,month,date,interest,note:document.getElementById('p-note').value});
+  const hid = parseInt(document.getElementById('p-house').value);
+  const month = document.getElementById('p-month').value;
+  const date = document.getElementById('p-date').value;
+
+  if(!hid || !month || !date){
+    alert('Please fill all fields.');
+    return;
+  }
+
+  const interest = parseFloat(document.getElementById('p-interest').value) || 0;
+
+  const p = await api('/api/payments','POST',{
+    house_id: hid,
+    month,
+    date,
+    interest,
+    note: document.getElementById('p-note').value
+  });
+  console.log("Payment saved:", p);
+  if (p.error) {
+    toast(p.error,  'error');
+    return;
+  }
+
   closeModal('payment-modal');
-  lastPayment={...p,house_id:hid,month,date,note:document.getElementById('p-note').value};
+
+  // Refresh all views immediately
+  console.log("Refreshing dashboard...");
+  await loadDashboard();
+
+  console.log("Dashboard refreshed");
+  await loadHouses();
+  console.log("Houses refreshed");
+
+  // Refresh ledger if currently open
+  const ledgerView = document.getElementById('view-ledger');
+  if (ledgerView && ledgerView.classList.contains('active')) {
+    await renderLedger();
+  }
+
+  lastPayment = {
+    ...p,
+    house_id: hid,
+    month,
+    date,
+    note: document.getElementById('p-note').value
+  };
+
   showReceipt(lastPayment);
   toast('Payment saved!');
 }

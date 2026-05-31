@@ -225,6 +225,16 @@ def api_add_payment():
         if "interest" in d and d["interest"] is not None:
             interest = float(d["interest"])
         total = principal + interest
+        existing = db.execute(
+            "SELECT id FROM payments WHERE house_id=? AND month=?",
+            (d["house_id"], d["month"])
+        ).fetchone()
+
+        if existing:
+            return jsonify({
+                "error": f"Payment already exists for {d['month']}"
+            }), 400
+        
         cur = db.execute(
             "INSERT INTO payments (house_id,month,date,principal,interest,total,note) VALUES (?,?,?,?,?,?,?)",
             (d["house_id"], d["month"], d["date"], principal, interest, total, d.get("note",""))
