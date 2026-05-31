@@ -12,7 +12,6 @@ from datetime import date, datetime
 app = Flask(__name__)
 DB = "ledger.db"
 
-init_db()
 
 
 # ── Database setup ────────────────────────────────────────────────────────────
@@ -61,6 +60,7 @@ def init_db():
             db.execute("INSERT OR IGNORE INTO settings VALUES (?,?)", (k, v))
         db.commit()
 
+init_db()  # Ensure DB is initialized on startup
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
