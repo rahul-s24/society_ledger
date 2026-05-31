@@ -1,20 +1,24 @@
 """
 SocietyLedger - Flask + SQLite backend
+Billing rules:
+  - Demand raised on 1st of every month
+  - Grace period: pay by 15th of that month → no interest
+  - If paid after 15th: interest = principal × (annual_rate/12/100) per overdue month
+  - Each additional calendar month unpaid adds another month of interest
+
 Run:  pip install flask
       python app.py
 Then open http://localhost:5000
 """
 
-from flask import Flask, request, jsonify, render_template, send_from_directory
-import sqlite3, os, math
+from flask import Flask, request, jsonify, render_template
+import sqlite3
 from datetime import date, datetime
 
 app = Flask(__name__)
 DB = "ledger.db"
 
-
-
-# ── Database setup ────────────────────────────────────────────────────────────
+# ── Database ──────────────────────────────────────────────────────────────────
 
 def get_db():
     conn = sqlite3.connect(DB)
@@ -49,18 +53,12 @@ def init_db():
             FOREIGN KEY (house_id) REFERENCES houses(id)
         );
         """)
-        # Default settings
-        defaults = {
-            "name": "Sunrise Heights",
-            "amount": "1500",
-            "due_day": "5",
-            "rate": "2"
-        }
+        defaults = {"name": "Sunrise Heights", "amount": "1500", "annual_rate": "24"}
         for k, v in defaults.items():
             db.execute("INSERT OR IGNORE INTO settings VALUES (?,?)", (k, v))
         db.commit()
 
-init_db()  # Ensure DB is initialized on startup
+init_db()
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -71,16 +69,22 @@ def get_setting(db, key, default=None):
 def get_house_amount(house, default_amount):
     return float(house["amount"]) if house["amount"] else float(default_amount)
 
-def calc_interest(amount, rate_pct, for_month, pay_date_str, due_day):
-    """Simple interest = amount × rate% × (days_late / 30)"""
+def calc_interest(principal, annual_rate_pct, for_month, pay_date_str):
+    """
+    Demand on 1st. Grace until 15th (inclusive).
+    After 15th: charge (annual_rate/12)% per calendar month late (minimum 1 month).
+    """
     year, month = map(int, for_month.split("-"))
-    due = date(year, month, int(due_day))
-    paid = datetime.strptime(pay_date_str, "%Y-%m-%d").date()
-    if paid <= due:
+    grace_deadline = date(year, month, 15)
+    pay_date = datetime.strptime(pay_date_str, "%Y-%m-%d").date()
+
+    if pay_date <= grace_deadline:
         return 0.0
-    days_late = (paid - due).days
-    interest = amount * (float(rate_pct) / 100) * (days_late / 30)
-    return round(interest, 2)
+
+    monthly_rate = float(annual_rate_pct) / 12 / 100  # e.g. 24/12/100 = 0.02
+    pay_year, pay_month = pay_date.year, pay_date.month
+    months_late = max(1, (pay_year - year) * 12 + (pay_month - month) + 1)
+    return round(principal * monthly_rate * months_late, 2)
 
 def paid_months_for_house(db, house_id):
     rows = db.execute("SELECT month FROM payments WHERE house_id=?", (house_id,)).fetchall()
@@ -89,8 +93,8 @@ def paid_months_for_house(db, house_id):
 def get_overdue_list(db):
     today = date.today()
     amount_default = get_setting(db, "amount", "1500")
-    due_day = int(get_setting(db, "due_day", "5"))
-    rate = get_setting(db, "rate", "2")
+    annual_rate = float(get_setting(db, "annual_rate", "24"))
+    monthly_rate = annual_rate / 12 / 100  # e.g. 0.02
     houses = db.execute("SELECT * FROM houses").fetchall()
     result = []
 
@@ -103,8 +107,9 @@ def get_overdue_list(db):
 
         while (cur_year, cur_month) <= (today.year, today.month):
             key = f"{cur_year}-{cur_month:02d}"
-            due_date = date(cur_year, cur_month, min(due_day, 28))
-            if key not in paid and today > due_date:
+            grace = date(cur_year, cur_month, 15)
+            # Demand is active once 1st passes; overdue once grace expires
+            if key not in paid and today > grace:
                 overdue_months.append(key)
             cur_month += 1
             if cur_month > 12:
@@ -117,9 +122,9 @@ def get_overdue_list(db):
             interest = 0.0
             for m in overdue_months:
                 my, mm = map(int, m.split("-"))
-                due = date(my, mm, min(due_day, 28))
-                days_late = max(0, (today - due).days)
-                interest += round(amt * float(rate) / 100 * (days_late / 30), 2)
+                # Months elapsed since demand (minimum 1)
+                months_late = max(1, (today.year - my) * 12 + (today.month - mm) + 1)
+                interest += round(amt * monthly_rate * months_late, 2)
             result.append({
                 "house_id": h["id"],
                 "house_no": h["no"],
@@ -131,13 +136,11 @@ def get_overdue_list(db):
             })
     return result
 
-
 # ── Routes ────────────────────────────────────────────────────────────────────
 
 @app.route("/")
 def index():
     return render_template("index.html")
-
 
 # Settings
 @app.route("/api/settings", methods=["GET"])
@@ -154,7 +157,6 @@ def api_save_settings():
             db.execute("INSERT OR REPLACE INTO settings VALUES (?,?)", (k, str(v)))
         db.commit()
     return jsonify({"ok": True})
-
 
 # Houses
 @app.route("/api/houses", methods=["GET"])
@@ -194,7 +196,6 @@ def api_delete_house(hid):
         db.commit()
     return jsonify({"ok": True})
 
-
 # Payments
 @app.route("/api/payments", methods=["GET"])
 def api_get_payments():
@@ -218,25 +219,25 @@ def api_add_payment():
         house = db.execute("SELECT * FROM houses WHERE id=?", (d["house_id"],)).fetchone()
         if not house:
             return jsonify({"error": "House not found"}), 404
-        amount_default = get_setting(db, "amount", "1500")
-        due_day = get_setting(db, "due_day", "5")
-        rate = get_setting(db, "rate", "2")
-        principal = get_house_amount(house, amount_default)
-        interest = calc_interest(principal, rate, d["month"], d["date"], due_day)
-        # Allow manual override of interest
-        if "interest" in d and d["interest"] is not None:
-            interest = float(d["interest"])
-        total = principal + interest
+
+        # Duplicate check
         existing = db.execute(
             "SELECT id FROM payments WHERE house_id=? AND month=?",
             (d["house_id"], d["month"])
         ).fetchone()
-
         if existing:
-            return jsonify({
-                "error": f"Payment already exists for {d['month']}"
-            }), 400
-        
+            return jsonify({"error": f"Payment for {d['month']} already recorded for this house."}), 400
+
+        amount_default = get_setting(db, "amount", "1500")
+        annual_rate = get_setting(db, "annual_rate", "24")
+        principal = get_house_amount(house, amount_default)
+
+        # Auto-calculate; allow manual override
+        interest = calc_interest(principal, annual_rate, d["month"], d["date"])
+        if "interest" in d and d["interest"] is not None:
+            interest = float(d["interest"])
+
+        total = principal + interest
         cur = db.execute(
             "INSERT INTO payments (house_id,month,date,principal,interest,total,note) VALUES (?,?,?,?,?,?,?)",
             (d["house_id"], d["month"], d["date"], principal, interest, total, d.get("note",""))
@@ -244,8 +245,28 @@ def api_add_payment():
         db.commit()
         return jsonify({"id": cur.lastrowid, "principal": principal, "interest": interest, "total": total})
 
+@app.route("/api/payments/<int:pid>", methods=["PUT"])
+def api_update_payment(pid):
+    d = request.json
+    principal = float(d.get("principal", 0))
+    interest = float(d.get("interest", 0))
+    total = principal + interest
+    with get_db() as db:
+        db.execute(
+            "UPDATE payments SET principal=?,interest=?,total=?,note=? WHERE id=?",
+            (principal, interest, total, d.get("note",""), pid)
+        )
+        db.commit()
+    return jsonify({"ok": True, "principal": principal, "interest": interest, "total": total})
 
-# Dashboard data
+@app.route("/api/payments/<int:pid>", methods=["DELETE"])
+def api_delete_payment(pid):
+    with get_db() as db:
+        db.execute("DELETE FROM payments WHERE id=?", (pid,))
+        db.commit()
+    return jsonify({"ok": True})
+
+# Dashboard
 @app.route("/api/dashboard", methods=["GET"])
 def api_dashboard():
     with get_db() as db:
@@ -273,7 +294,6 @@ def api_dashboard():
             "recent_payments": [dict(r) for r in recent]
         })
 
-
 # Interest preview
 @app.route("/api/calc_interest", methods=["GET"])
 def api_calc_interest():
@@ -285,13 +305,25 @@ def api_calc_interest():
         if not house:
             return jsonify({"error": "Not found"}), 404
         amount_default = get_setting(db, "amount", "1500")
-        due_day = get_setting(db, "due_day", "5")
-        rate = get_setting(db, "rate", "2")
+        annual_rate = get_setting(db, "annual_rate", "24")
         principal = get_house_amount(house, amount_default)
-        interest = calc_interest(principal, rate, month, pay_date, due_day)
-        return jsonify({"principal": principal, "interest": interest, "total": principal + interest, "rate": rate})
-
+        interest = calc_interest(principal, annual_rate, month, pay_date)
+        # Compute months_late for display
+        year, mon = map(int, month.split("-"))
+        pd = datetime.strptime(pay_date, "%Y-%m-%d").date()
+        grace = date(year, mon, 15)
+        months_late = max(1, (pd.year - year) * 12 + (pd.month - mon) + 1) if pd > grace else 0
+        return jsonify({
+            "principal": principal,
+            "interest": interest,
+            "total": principal + interest,
+            "annual_rate": annual_rate,
+            "monthly_rate": float(annual_rate) / 12,
+            "months_late": months_late,
+            "on_time": pd <= grace
+        })
 
 if __name__ == "__main__":
-    print("\n✅  SocietyLedger running → http://localhost:5000\n")
+    print("\n✅  SocietyLedger running → http://localhost:5000")
+    print("   Billing: Demand on 1st | Grace till 15th | 24% p.a. interest after\n")
     app.run(debug=True)

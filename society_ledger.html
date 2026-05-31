@@ -48,6 +48,7 @@
   tr:hover td{background:#FAFAF8}
   .badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500}
   .badge.ok{background:#E8F8EF;color:#1A6E3C}
+  .badge.grace{background:#EEF2FF;color:#3730A3}
   .badge.due{background:#FEF3E2;color:#9B5E0A}
   .badge.over{background:#FDECEA;color:#9B2222}
   .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:7px;border:none;cursor:pointer;font-family:var(--font-body);font-size:13px;transition:all .15s}
@@ -68,6 +69,7 @@
   .form-group input:focus,.form-group select:focus{border-color:var(--accent3);box-shadow:0 0 0 2px #E8F5EE}
   .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .info-box{background:var(--accent2);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--accent);margin-bottom:14px;line-height:1.6}
+  .warn-box{background:#FEF3E2;border-radius:8px;padding:12px 14px;font-size:12px;color:#7C4A00;margin-bottom:14px;line-height:1.6}
   .view{display:none}
   .view.active{display:block}
   .int-row td{background:#FFFBF5}
@@ -78,6 +80,8 @@
   .receipt{background:#FFFEF9;border:1px dashed var(--border);border-radius:8px;padding:16px;font-size:12px;line-height:1.9}
   .receipt-row{display:flex;justify-content:space-between}
   .receipt-divider{border:none;border-top:1px dashed var(--border);margin:8px 0}
+  .rule-box{background:#F0F4FF;border:1px solid #C7D2FE;border-radius:8px;padding:14px 16px;font-size:12px;color:#3730A3;line-height:1.8;margin-bottom:16px}
+  .rule-box strong{display:block;margin-bottom:4px;font-size:13px}
 </style>
 </head>
 <body>
@@ -94,7 +98,7 @@
       <div class="nav-item" onclick="showView('settings')" id="nav-settings"><i class="ti ti-settings"></i> Settings</div>
     </nav>
     <div style="padding:16px 20px;border-top:1px solid rgba(255,255,255,0.1)">
-      <div style="font-size:11px;color:rgba(255,255,255,0.4)">Due date: <span id="sidebar-due">5th of month</span></div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.4)">Demand: 1st &nbsp;|&nbsp; Due: 15th</div>
     </div>
   </div>
 
@@ -118,7 +122,7 @@
         </div>
         <div class="card">
           <div class="card-head"><h3>Recent Payments</h3></div>
-          <table><thead><tr><th>Date</th><th>House</th><th>Amount (₹)</th><th>Months Covered</th><th>Status</th><th></th></tr></thead>
+          <table><thead><tr><th>Date</th><th>House</th><th>Amount (₹)</th><th>Month</th><th>Status</th><th></th></tr></thead>
           <tbody id="recent-payments-body"></tbody></table>
         </div>
       </div>
@@ -149,16 +153,25 @@
 
       <!-- SETTINGS -->
       <div class="view" id="view-settings">
-        <div class="card" style="max-width:480px">
+        <div class="card" style="max-width:520px">
           <div class="card-head"><h3>Society Settings</h3></div>
           <div class="modal-body">
+            <div class="rule-box">
+              <strong>📋 Billing Rules</strong>
+              Demand generated on <strong>1st</strong> of every month.<br>
+              Grace period: pay by <strong>15th</strong> — no interest charged.<br>
+              If unpaid after 15th: interest = <strong>2% per month</strong> (24% p.a.) on full month amount.<br>
+              Interest accumulates every month the payment remains unpaid.
+            </div>
             <div class="form-group"><label>Society Name</label><input id="s-name" value="Sunrise Heights"></div>
             <div class="form-row">
               <div class="form-group"><label>Monthly Maintenance (₹)</label><input id="s-amount" type="number" value="1500"></div>
-              <div class="form-group"><label>Due Day of Month</label><input id="s-dueday" type="number" min="1" max="28" value="5"></div>
+              <div class="form-group"><label>Annual Interest Rate (%)</label><input id="s-rate" type="number" step="0.1" value="24" placeholder="24"></div>
             </div>
-            <div class="form-group"><label>Interest Rate (% per month on overdue)</label><input id="s-rate" type="number" step="0.1" value="2"></div>
-            <div class="info-box">Interest = (Overdue Amount × Rate% × Months Overdue) / 100<br>Calculated from due date to payment date.</div>
+            <div class="info-box">
+              Monthly rate = Annual Rate ÷ 12 &nbsp;(24% p.a. → 2%/month)<br>
+              Interest charged on full month's amount if paid after 15th.
+            </div>
             <button class="btn btn-primary" onclick="saveSettings()"><i class="ti ti-check"></i> Save Settings</button>
           </div>
         </div>
@@ -200,10 +213,10 @@
           <div class="form-group"><label>For Month</label><input id="p-month" type="month"></div>
           <div class="form-group"><label>Payment Date</label><input id="p-date" type="date"></div>
         </div>
-        <div id="interest-preview" class="info-box" style="display:none"></div>
+        <div id="interest-preview" style="display:none"></div>
         <div class="form-row">
           <div class="form-group"><label>Principal (₹)</label><input id="p-principal" type="number" readonly style="background:#F0EDE8"></div>
-          <div class="form-group"><label>Interest Charged (₹)</label><input id="p-interest" type="number" value="0"></div>
+          <div class="form-group"><label>Interest Charged (₹)</label><input id="p-interest" type="number" value="0" oninput="pmUpdateTotal()"></div>
         </div>
         <div class="form-group"><label>Total Collected (₹)</label><input id="p-total" type="number" readonly style="background:#F0EDE8;font-weight:500"></div>
         <div class="form-group"><label>Note (optional)</label><input id="p-note" placeholder="e.g. Cash payment"></div>
@@ -251,60 +264,92 @@
 
 <script>
 const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-let settings={name:'Sunrise Heights',amount:1500,dueDay:5,rate:2};
+
+// Settings: annualRate stored, monthlyRate = annualRate/12
+let settings={name:'Sunrise Heights',amount:1500,annualRate:24};
 let houses=[
-  {id:1,no:'A-101',owner:'Ramesh Sharma',phone:'9876543210',email:'',amount:null,since:'2022-01'},
-  {id:2,no:'A-102',owner:'Priya Gupta',phone:'9812345678',email:'',amount:null,since:'2021-06'},
-  {id:3,no:'B-201',owner:'Anil Verma',phone:'9900112233',email:'',amount:1800,since:'2020-03'},
-  {id:4,no:'B-202',owner:'Sunita Joshi',phone:'9988776655',email:'',amount:null,since:'2023-01'},
+  {id:1,no:'A-101',owner:'Ramesh Sharma',phone:'9876543210',email:'',amount:null,since:'2024-01'},
+  {id:2,no:'A-102',owner:'Priya Gupta',phone:'9812345678',email:'',amount:null,since:'2024-01'},
+  {id:3,no:'B-201',owner:'Anil Verma',phone:'9900112233',email:'',amount:1800,since:'2024-01'},
+  {id:4,no:'B-202',owner:'Sunita Joshi',phone:'9988776655',email:'',amount:null,since:'2024-01'},
 ];
-let payments=[
-  {id:1,houseId:1,month:'2025-03',date:'2025-03-04',principal:1500,interest:0,total:1500,note:'Online'},
-  {id:2,houseId:2,month:'2025-03',date:'2025-03-15',principal:1500,interest:60,total:1560,note:'Cash'},
-  {id:3,houseId:1,month:'2025-04',date:'2025-04-05',principal:1500,interest:0,total:1500,note:''},
-  {id:4,houseId:3,month:'2025-03',date:'2025-04-10',principal:1800,interest:108,total:1908,note:'Late'},
-  {id:5,houseId:4,month:'2025-04',date:'2025-04-03',principal:1500,interest:0,total:1500,note:''},
-];
-let nextPId=6,nextHId=5;
+let payments=[];
+let nextPId=1,nextHId=5;
 
 function getAmount(h){return h.amount||settings.amount;}
-function calcInterest(houseId,forMonth,payDate){
-  const h=houses.find(x=>x.id===houseId);if(!h)return 0;
+function monthlyRate(){return settings.annualRate/12;}  // e.g. 24/12 = 2%
+
+/**
+ * Demand is raised on 1st of each month.
+ * Grace period: until 15th of that month (inclusive).
+ * If paid on 16th or later → interest = principal × (annualRate/12/100) per overdue month.
+ * If payment is months after the demand month, interest compounds:
+ *   e.g. paying in March for January demand = 2 months of interest.
+ */
+function calcInterest(houseId, forMonth, payDateStr){
+  const h=houses.find(x=>x.id===houseId); if(!h) return 0;
   const amt=getAmount(h);
-  const[yr,mo]=forMonth.split('-').map(Number);
-  const due=new Date(yr,mo-1,settings.dueDay);
-  const paid=new Date(payDate);
-  if(paid<=due)return 0;
-  const daysLate=Math.max(0,Math.round((paid-due)/86400000));
-  return Math.round(amt*settings.rate/100*(daysLate/30));
+  const rate=monthlyRate()/100; // e.g. 0.02
+
+  const [yr,mo]=forMonth.split('-').map(Number);
+  // Grace deadline: 15th of the demand month
+  const graceDeadline=new Date(yr,mo-1,15);
+  const payDate=new Date(payDateStr);
+
+  if(payDate<=graceDeadline) return 0; // within grace, no interest
+
+  // Count how many months of interest to charge:
+  // 1 month if paid in same month (after 15th)
+  // Additional month for each subsequent calendar month that passes
+  const payYear=payDate.getFullYear();
+  const payMo=payDate.getMonth()+1;
+  const monthsLate=Math.max(1,(payYear-yr)*12+(payMo-mo)+1);
+
+  return Math.round(amt*rate*monthsLate);
 }
+
 function monthLabel(m){const[y,mo]=m.split('-');return MONTHS[parseInt(mo)-1]+' '+y;}
 function paidMonths(houseId){return new Set(payments.filter(p=>p.houseId===houseId).map(p=>p.month));}
 
+// A month's demand is "active" once the 1st has passed
+function isDemandActive(yr,mo){
+  const now=new Date();
+  const first=new Date(yr,mo-1,1);
+  return now>=first;
+}
+
 function overdueList(){
-  const now=new Date();const result=[];
+  const now=new Date();
+  const result=[];
   houses.forEach(h=>{
     const paid=paidMonths(h.id);
     const since=h.since?new Date(h.since+'-01'):new Date(now.getFullYear()-1,0,1);
     let cur=new Date(since.getFullYear(),since.getMonth(),1);
-    const thisMonth=new Date(now.getFullYear(),now.getMonth(),1);
+    const thisMonthStart=new Date(now.getFullYear(),now.getMonth(),1);
     let overdue=[];
-    while(cur<=thisMonth){
-      const key=cur.getFullYear()+'-'+(String(cur.getMonth()+1).padStart(2,'0'));
-      const dueDate=new Date(cur.getFullYear(),cur.getMonth(),settings.dueDay);
-      if(!paid.has(key)&&now>dueDate)overdue.push(key);
+
+    while(cur<=thisMonthStart){
+      const ky=cur.getFullYear(), km=cur.getMonth()+1;
+      const key=`${ky}-${String(km).padStart(2,'0')}`;
+      const grace=new Date(ky,km-1,15); // 15th of that month
+      // Only consider overdue if demand raised (1st passed) AND grace period expired
+      if(!paid.has(key) && now>grace) overdue.push(key);
       cur=new Date(cur.getFullYear(),cur.getMonth()+1,1);
     }
+
     if(overdue.length){
-      const principal=overdue.length*getAmount(h);
+      const amt=getAmount(h);
+      const rate=monthlyRate()/100;
+      let principal=overdue.length*amt;
       let interest=0;
       overdue.forEach(m=>{
-        const[yr,mo]=m.split('-').map(Number);
-        const due=new Date(yr,mo-1,settings.dueDay);
-        const daysLate=Math.max(0,Math.round((now-due)/86400000));
-        interest+=Math.round(getAmount(h)*settings.rate/100*(daysLate/30));
+        const[ky,km]=m.split('-').map(Number);
+        // Months elapsed since that demand (at least 1)
+        const nowY=now.getFullYear(), nowM=now.getMonth()+1;
+        const monthsLate=Math.max(1,(nowY-ky)*12+(nowM-km)+1);
+        interest+=Math.round(amt*rate*monthsLate);
       });
-      result.push({house:h,months:overdue,principal,interest,total:principal+interest});
+      result.push({house:h,months:overdue,principal:Math.round(principal),interest:Math.round(interest),total:Math.round(principal+interest)});
     }
   });
   return result;
@@ -314,11 +359,12 @@ function renderMetrics(){
   const ol=overdueList();
   const totalDue=ol.reduce((s,x)=>s+x.total,0);
   const totalInterest=ol.reduce((s,x)=>s+x.interest,0);
-  const now=new Date();const mKey=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  const now=new Date();
+  const mKey=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
   const collected=payments.filter(p=>p.month===mKey).reduce((s,p)=>s+p.total,0);
   document.getElementById('metrics-grid').innerHTML=`
-    <div class="metric accent"><div class="metric-label">Total Overdue</div><div class="metric-value">₹${totalDue.toLocaleString()}</div><div class="metric-sub">${ol.length} houses</div></div>
-    <div class="metric"><div class="metric-label">Interest Accrued</div><div class="metric-value">₹${totalInterest.toLocaleString()}</div><div class="metric-sub">${settings.rate}% / month</div></div>
+    <div class="metric accent"><div class="metric-label">Total Overdue</div><div class="metric-value">₹${totalDue.toLocaleString()}</div><div class="metric-sub">${ol.length} house${ol.length!==1?'s':''}</div></div>
+    <div class="metric"><div class="metric-label">Interest Accrued</div><div class="metric-value">₹${totalInterest.toLocaleString()}</div><div class="metric-sub">${settings.annualRate}% p.a.</div></div>
     <div class="metric"><div class="metric-label">Collected This Month</div><div class="metric-value">₹${collected.toLocaleString()}</div><div class="metric-sub">${new Date().toLocaleString('default',{month:'long'})}</div></div>
     <div class="metric"><div class="metric-label">Total Houses</div><div class="metric-value">${houses.length}</div><div class="metric-sub">${houses.length-ol.length} up to date</div></div>`;
 }
@@ -340,18 +386,27 @@ function renderRecentPayments(){
   const recent=[...payments].sort((a,b)=>b.id-a.id).slice(0,8);
   if(!recent.length){tb.innerHTML='<tr><td colspan="6" class="empty">No payments yet</td></tr>';return;}
   tb.innerHTML=recent.map(p=>{
-    const h=houses.find(x=>x.id===p.houseId);const late=p.interest>0;
-    return`<tr><td>${p.date}</td><td>${h?h.no:'-'} <span style="font-size:11px;color:var(--muted)">${h?h.owner:''}</span></td>
-    <td>₹${p.total.toLocaleString()}</td><td>${monthLabel(p.month)}</td>
-    <td><span class="badge ${late?'due':'ok'}">${late?'Late':'On time'}</span></td>
-    <td><button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="deletePayment(${p.id})" title="Delete payment"><i class="ti ti-trash"></i></button></td></tr>`;}).join('');
+    const h=houses.find(x=>x.id===p.houseId);
+    const [yr,mo]=p.month.split('-').map(Number);
+    const grace=new Date(yr,mo-1,15);
+    const paid=new Date(p.date);
+    const status=paid<=grace?'ok':'due';
+    const label=paid<=grace?'On time':'Late';
+    return`<tr>
+      <td>${p.date}</td>
+      <td>${h?h.no:'-'} <span style="font-size:11px;color:var(--muted)">${h?h.owner:''}</span></td>
+      <td>₹${p.total.toLocaleString()}</td><td>${monthLabel(p.month)}</td>
+      <td><span class="badge ${status}">${label}</span></td>
+      <td><button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="deletePayment(${p.id})" title="Delete"><i class="ti ti-trash"></i></button></td>
+    </tr>`;}).join('');
 }
 
 function renderHouses(){
-  const tb=document.getElementById('houses-body');const ol=overdueList();
-  const overdueIds=new Set(ol.map(x=>x.house.id));
+  const tb=document.getElementById('houses-body');
+  const ol=overdueList();const overdueIds=new Set(ol.map(x=>x.house.id));
+  if(!houses.length){tb.innerHTML='<tr><td colspan="6" class="empty">No houses added yet</td></tr>';return;}
   tb.innerHTML=houses.map(h=>`<tr>
-    <td><strong>${h.no}</strong></td><td>${h.owner}</td><td>${h.phone}</td>
+    <td><strong>${h.no}</strong></td><td>${h.owner}</td><td>${h.phone||'-'}</td>
     <td>₹${getAmount(h).toLocaleString()}</td>
     <td><span class="badge ${overdueIds.has(h.id)?'over':'ok'}">${overdueIds.has(h.id)?'Overdue':'Paid'}</span></td>
     <td>
@@ -369,18 +424,19 @@ function renderLedger(){
   const total=data.reduce((s,p)=>s+p.total,0);
   document.getElementById('ledger-summary').textContent=`${data.length} records · ₹${total.toLocaleString()} total`;
   const tb=document.getElementById('ledger-body');
-  if(!data.length){tb.innerHTML='<tr><td colspan="7" class="empty">No records found</td></tr>';return;}
+  if(!data.length){tb.innerHTML='<tr><td colspan="8" class="empty">No records found</td></tr>';return;}
   tb.innerHTML=data.map(p=>{
     const h=houses.find(x=>x.id===p.houseId);
     return`<tr ${p.interest>0?'class="int-row"':''}>
       <td>${p.date}</td>
       <td>${h?h.no:'-'}<br><span style="font-size:11px;color:var(--muted)">${h?h.owner:''}</span></td>
-      <td>${monthLabel(p.month)}</td><td>₹${p.principal.toLocaleString()}</td>
+      <td>${monthLabel(p.month)}</td>
+      <td>₹${p.principal.toLocaleString()}</td>
       <td class="${p.interest>0?'interest-amt':''}">₹${p.interest.toLocaleString()}</td>
       <td><strong>₹${p.total.toLocaleString()}</strong></td>
       <td><button class="btn btn-ghost btn-sm" onclick="showReceipt(${p.id})"><i class="ti ti-receipt"></i></button></td>
       <td style="white-space:nowrap">
-        <button class="btn btn-ghost btn-sm" onclick="openEditPayment(${p.id})" title="Edit amount"><i class="ti ti-edit"></i></button>
+        <button class="btn btn-ghost btn-sm" onclick="openEditPayment(${p.id})" title="Edit"><i class="ti ti-edit"></i></button>
         <button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="deletePayment(${p.id})" title="Delete"><i class="ti ti-trash"></i></button>
       </td>
     </tr>`;}).join('');
@@ -404,8 +460,14 @@ function showView(v){
   if(v==='dashboard'){renderMetrics();renderOverdue();renderRecentPayments();}
   if(v==='houses')renderHouses();
   if(v==='ledger'){populateFilters();renderLedger();}
+  if(v==='settings'){
+    document.getElementById('s-name').value=settings.name;
+    document.getElementById('s-amount').value=settings.amount;
+    document.getElementById('s-rate').value=settings.annualRate;
+  }
 }
 
+// ── House CRUD ────────────────────────────────────────────────────────────────
 function openHouseModal(){
   ['h-id','h-no','h-owner','h-phone','h-email','h-amount','h-since'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('house-modal-title').textContent='Add House';
@@ -432,7 +494,8 @@ function saveHouse(){
   const owner=document.getElementById('h-owner').value.trim();
   if(!no||!owner){alert('House no. and owner name are required.');return;}
   const id=parseInt(document.getElementById('h-id').value)||0;
-  const obj={id:id||nextHId++,no,owner,phone:document.getElementById('h-phone').value,
+  const obj={id:id||nextHId++,no,owner,
+    phone:document.getElementById('h-phone').value,
     email:document.getElementById('h-email').value,
     amount:parseFloat(document.getElementById('h-amount').value)||null,
     since:document.getElementById('h-since').value};
@@ -440,49 +503,69 @@ function saveHouse(){
   closeModal('house-modal');renderHouses();
 }
 
+// ── Payment recording ─────────────────────────────────────────────────────────
 function openPaymentModal(houseId){
   const sel=document.getElementById('p-house');
   sel.innerHTML='<option value="">Select house...</option>'+houses.map(h=>`<option value="${h.id}">${h.no} — ${h.owner}</option>`).join('');
   if(houseId)sel.value=houseId;
-  const now=new Date();const mKey=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
-  document.getElementById('p-month').value=mKey;
+  const now=new Date();
+  document.getElementById('p-month').value=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
   document.getElementById('p-date').value=now.toISOString().split('T')[0];
   document.getElementById('p-note').value='';
   updatePaymentCalc();
   sel.oninput=updatePaymentCalc;
   document.getElementById('p-month').oninput=updatePaymentCalc;
   document.getElementById('p-date').oninput=updatePaymentCalc;
-  document.getElementById('p-interest').oninput=function(){
-    const pr=parseFloat(document.getElementById('p-principal').value)||0;
-    document.getElementById('p-total').value=(pr+parseFloat(this.value||0)).toFixed(0);
-  };
   document.getElementById('payment-modal').style.display='flex';
 }
 function quickPay(houseId){openPaymentModal(houseId);}
+
+function pmUpdateTotal(){
+  const pr=parseFloat(document.getElementById('p-principal').value)||0;
+  const int=parseFloat(document.getElementById('p-interest').value)||0;
+  document.getElementById('p-total').value=pr+int;
+}
+
 function updatePaymentCalc(){
   const hid=parseInt(document.getElementById('p-house').value);
   const month=document.getElementById('p-month').value;
-  const date=document.getElementById('p-date').value;
-  if(!hid||!month||!date){document.getElementById('interest-preview').style.display='none';return;}
-  const h=houses.find(x=>x.id===hid);const amt=getAmount(h);
-  const interest=calcInterest(hid,month,date);
+  const dateVal=document.getElementById('p-date').value;
+  const prev=document.getElementById('interest-preview');
+  if(!hid||!month||!dateVal){prev.style.display='none';return;}
+  const h=houses.find(x=>x.id===hid);
+  const amt=getAmount(h);
+  const interest=calcInterest(hid,month,dateVal);
   document.getElementById('p-principal').value=amt;
   document.getElementById('p-interest').value=interest;
   document.getElementById('p-total').value=amt+interest;
-  const prev=document.getElementById('interest-preview');
+
+  const [yr,mo]=month.split('-').map(Number);
+  const grace=new Date(yr,mo-1,15);
+  const payDate=new Date(dateVal);
+
   if(interest>0){
-    const[yr,mo]=month.split('-').map(Number);
-    const due=new Date(yr,mo-1,settings.dueDay);
-    const days=Math.round((new Date(date)-due)/86400000);
+    const [pyr,pmo]=[ payDate.getFullYear(), payDate.getMonth()+1 ];
+    const monthsLate=Math.max(1,(pyr-yr)*12+(pmo-mo)+1);
+    prev.className='warn-box';
     prev.style.display='block';
-    prev.innerHTML=`<strong>Late payment detected</strong> — ${days} days after due date.<br>Interest: ₹${amt} × ${settings.rate}% × ${(days/30).toFixed(1)} months = <strong>₹${interest}</strong>`;
-  }else{prev.style.display='none';}
+    prev.innerHTML=`⚠️ <strong>Late payment</strong> — paid after 15th grace period.<br>
+      Interest: ₹${amt} × ${monthlyRate()}% × ${monthsLate} month${monthsLate>1?'s':''} = <strong>₹${interest}</strong>`;
+  } else {
+    prev.className='info-box';
+    prev.style.display='block';
+    prev.innerHTML=`✅ <strong>Within grace period</strong> — No interest charged (paid on or before 15th ${MONTHS[mo-1]}).`;
+  }
 }
+
 function savePayment(){
   const hid=parseInt(document.getElementById('p-house').value);
   const month=document.getElementById('p-month').value;
   const date=document.getElementById('p-date').value;
   if(!hid||!month||!date){alert('Please fill all fields.');return;}
+  // Check duplicate
+  if(payments.find(p=>p.houseId===hid&&p.month===month)){
+    alert(`Payment for ${monthLabel(month)} already exists for this house.`);return;
+  }
   const principal=parseFloat(document.getElementById('p-principal').value)||0;
   const interest=parseFloat(document.getElementById('p-interest').value)||0;
   const p={id:nextPId++,houseId:hid,month,date,principal,interest,total:principal+interest,note:document.getElementById('p-note').value};
@@ -492,11 +575,11 @@ function savePayment(){
   renderMetrics();renderOverdue();renderRecentPayments();
 }
 
+// ── Delete / Edit payment ─────────────────────────────────────────────────────
 function deletePayment(pid){
   if(!confirm('Delete this payment? This cannot be undone.'))return;
   payments=payments.filter(x=>x.id!==pid);
-  renderMetrics();renderOverdue();renderRecentPayments();
-  renderLedger();
+  renderMetrics();renderOverdue();renderRecentPayments();renderLedger();
 }
 
 function openEditPayment(pid){
@@ -513,7 +596,7 @@ function openEditPayment(pid){
 function epUpdateTotal(){
   const pr=parseFloat(document.getElementById('ep-principal').value)||0;
   const int=parseFloat(document.getElementById('ep-interest').value)||0;
-  document.getElementById('ep-total').value=(pr+int).toFixed(0);
+  document.getElementById('ep-total').value=pr+int;
 }
 function saveEditPayment(){
   const pid=parseInt(document.getElementById('ep-id').value);
@@ -525,9 +608,14 @@ function saveEditPayment(){
   renderMetrics();renderOverdue();renderRecentPayments();renderLedger();
 }
 
+// ── Receipt ───────────────────────────────────────────────────────────────────
 function showReceipt(pid){
   const p=payments.find(x=>x.id===pid);if(!p)return;
   const h=houses.find(x=>x.id===p.houseId);
+  const [yr,mo]=p.month.split('-').map(Number);
+  const grace=new Date(yr,mo-1,15);
+  const paidDate=new Date(p.date);
+  const onTime=paidDate<=grace;
   document.getElementById('receipt-content').innerHTML=`
     <div class="receipt">
       <div style="text-align:center;margin-bottom:12px">
@@ -537,11 +625,12 @@ function showReceipt(pid){
       <hr class="receipt-divider">
       <div class="receipt-row"><span>House</span><strong>${h?h.no:'-'}</strong></div>
       <div class="receipt-row"><span>Owner</span><span>${h?h.owner:'-'}</span></div>
-      <div class="receipt-row"><span>For Month</span><span>${monthLabel(p.month)}</span></div>
+      <div class="receipt-row"><span>Demand Month</span><span>${monthLabel(p.month)}</span></div>
       <div class="receipt-row"><span>Payment Date</span><span>${p.date}</span></div>
+      <div class="receipt-row"><span>Status</span><span style="color:${onTime?'var(--ok)':'var(--danger)'}">${onTime?'✓ On Time':'⚠ Late (after 15th)'}</span></div>
       <hr class="receipt-divider">
       <div class="receipt-row"><span>Maintenance</span><span>₹${p.principal.toLocaleString()}</span></div>
-      ${p.interest>0?`<div class="receipt-row"><span>Late Interest (${settings.rate}%/mo)</span><span style="color:var(--warn)">₹${p.interest.toLocaleString()}</span></div>`:''}
+      ${p.interest>0?`<div class="receipt-row"><span>Late Interest (${settings.annualRate}% p.a.)</span><span style="color:var(--warn)">₹${p.interest.toLocaleString()}</span></div>`:''}
       <hr class="receipt-divider">
       <div class="receipt-row" style="font-weight:500;font-size:13px"><span>Total Paid</span><span>₹${p.total.toLocaleString()}</span></div>
       ${p.note?`<div style="margin-top:8px;font-size:11px;color:var(--muted)">Note: ${p.note}</div>`:''}
@@ -549,27 +638,29 @@ function showReceipt(pid){
   document.getElementById('receipt-modal').style.display='flex';
 }
 
+// ── Settings ──────────────────────────────────────────────────────────────────
 function saveSettings(){
-  settings.name=document.getElementById('s-name').value;
+  settings.name=document.getElementById('s-name').value.trim()||settings.name;
   settings.amount=parseFloat(document.getElementById('s-amount').value)||1500;
-  settings.dueDay=parseInt(document.getElementById('s-dueday').value)||5;
-  settings.rate=parseFloat(document.getElementById('s-rate').value)||2;
+  settings.annualRate=parseFloat(document.getElementById('s-rate').value)||24;
   document.getElementById('society-name-display').textContent=settings.name;
-  document.getElementById('sidebar-due').textContent=settings.dueDay+'th of month';
+  renderMetrics();renderOverdue();
   alert('Settings saved!');
 }
+
 function closeModal(id){document.getElementById(id).style.display='none';}
+
 function exportCSV(){
   const rows=[['Date','House','Owner','Month','Principal','Interest','Total','Note']];
   payments.forEach(p=>{
     const h=houses.find(x=>x.id===p.houseId);
-    rows.push([p.date,h?h.no:'',h?h.owner:'',monthLabel(p.month),p.principal,p.interest,p.total,p.note]);
+    rows.push([p.date,h?h.no:'',h?h.owner:'',monthLabel(p.month),p.principal,p.interest,p.total,p.note||'']);
   });
   const csv=rows.map(r=>r.join(',')).join('\n');
-  const a=document.createElement('a');
-  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
   a.download='ledger.csv';a.click();
 }
+
 showView('dashboard');
 </script>
 </body>

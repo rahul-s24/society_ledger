@@ -47,6 +47,7 @@
   tr:hover td{background:#FAFAF8}
   .badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500}
   .badge.ok{background:#E8F8EF;color:#1A6E3C}
+  .badge.grace{background:#EEF2FF;color:#3730A3}
   .badge.due{background:#FEF3E2;color:#9B5E0A}
   .badge.over{background:#FDECEA;color:#9B2222}
   .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:7px;border:none;cursor:pointer;font-family:var(--font-body);font-size:13px;transition:all .15s}
@@ -67,6 +68,9 @@
   .form-group input:focus,.form-group select:focus{border-color:var(--accent3);box-shadow:0 0 0 2px #E8F5EE}
   .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .info-box{background:var(--accent2);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--accent);margin-bottom:14px;line-height:1.6}
+  .warn-box{background:#FEF3E2;border-radius:8px;padding:12px 14px;font-size:12px;color:#7C4A00;margin-bottom:14px;line-height:1.6}
+  .rule-box{background:#F0F4FF;border:1px solid #C7D2FE;border-radius:8px;padding:14px 16px;font-size:12px;color:#3730A3;line-height:1.8;margin-bottom:16px}
+  .rule-box strong{display:block;margin-bottom:4px;font-size:13px}
   .view{display:none}.view.active{display:block}
   .int-row td{background:#FFFBF5}
   .interest-amt{color:var(--warn);font-weight:500}
@@ -91,7 +95,7 @@
       <div class="nav-item" onclick="showView('settings')" id="nav-settings"><i class="ti ti-settings"></i> Settings</div>
     </nav>
     <div style="padding:16px 20px;border-top:1px solid rgba(255,255,255,.1)">
-      <div style="font-size:11px;color:rgba(255,255,255,.4)">Due date: <span id="sidebar-due">5th</span> of month</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.4)">Demand: 1st &nbsp;|&nbsp; Due: 15th</div>
     </div>
   </div>
 
@@ -115,7 +119,7 @@
         </div>
         <div class="card">
           <div class="card-head"><h3>Recent Payments</h3></div>
-          <table><thead><tr><th>Date</th><th>House</th><th>Amount (₹)</th><th>Month</th><th>Status</th></tr></thead>
+          <table><thead><tr><th>Date</th><th>House</th><th>Amount (₹)</th><th>Month</th><th>Status</th><th></th></tr></thead>
           <tbody id="recent-body"></tbody></table>
         </div>
       </div>
@@ -138,23 +142,29 @@
         </div>
         <div class="card">
           <div class="card-head"><h3>Payment Ledger</h3><span id="ledger-summary" style="font-size:12px;color:var(--muted)"></span></div>
-          <table><thead><tr><th>Date</th><th>House</th><th>Month</th><th>Principal (₹)</th><th>Interest (₹)</th><th>Total (₹)</th><th>Receipt</th></tr></thead>
+          <table><thead><tr><th>Date</th><th>House</th><th>Month</th><th>Principal (₹)</th><th>Interest (₹)</th><th>Total (₹)</th><th>Receipt</th><th></th></tr></thead>
           <tbody id="ledger-body"></tbody></table>
         </div>
       </div>
 
       <!-- SETTINGS -->
       <div class="view" id="view-settings">
-        <div class="card" style="max-width:480px">
+        <div class="card" style="max-width:520px">
           <div class="card-head"><h3>Society Settings</h3></div>
           <div class="modal-body">
+            <div class="rule-box">
+              <strong>📋 Billing Rules</strong>
+              Demand generated on <strong>1st</strong> of every month.<br>
+              Grace period: pay by <strong>15th</strong> — no interest charged.<br>
+              If unpaid after 15th: interest = <strong>Annual Rate ÷ 12</strong> per month on full amount.<br>
+              Interest accumulates every month the payment remains unpaid.
+            </div>
             <div class="form-group"><label>Society Name</label><input id="s-name"></div>
             <div class="form-row">
               <div class="form-group"><label>Monthly Maintenance (₹)</label><input id="s-amount" type="number"></div>
-              <div class="form-group"><label>Due Day of Month</label><input id="s-dueday" type="number" min="1" max="28"></div>
+              <div class="form-group"><label>Annual Interest Rate (%)</label><input id="s-rate" type="number" step="0.1" placeholder="24"></div>
             </div>
-            <div class="form-group"><label>Interest Rate (% per month)</label><input id="s-rate" type="number" step="0.1"></div>
-            <div class="info-box">Interest = Overdue Amount × Rate% × (Days Late / 30)</div>
+            <div class="info-box">Monthly rate = Annual Rate ÷ 12 &nbsp;(24% p.a. → 2%/month)<br>Interest charged on full month's amount if paid after 15th.</div>
             <button class="btn btn-primary" onclick="saveSettings()"><i class="ti ti-check"></i> Save Settings</button>
           </div>
         </div>
@@ -198,7 +208,7 @@
         <div class="form-group"><label>For Month</label><input id="p-month" type="month"></div>
         <div class="form-group"><label>Payment Date</label><input id="p-date" type="date"></div>
       </div>
-      <div id="int-preview" class="info-box" style="display:none"></div>
+      <div id="int-preview" style="display:none"></div>
       <div class="form-row">
         <div class="form-group"><label>Principal (₹)</label><input id="p-principal" readonly style="background:#F0EDE8"></div>
         <div class="form-group"><label>Interest (₹)</label><input id="p-interest" type="number" value="0" oninput="updateTotal()"></div>
@@ -209,6 +219,27 @@
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('payment-modal')">Cancel</button>
       <button class="btn btn-primary" onclick="savePayment()"><i class="ti ti-receipt"></i> Save &amp; Receipt</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Payment Modal -->
+<div class="modal-bg" id="edit-payment-modal" style="display:none">
+  <div class="modal">
+    <div class="modal-head"><h3>Edit Payment</h3><button class="btn btn-ghost btn-sm" onclick="closeModal('edit-payment-modal')"><i class="ti ti-x"></i></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="ep-id">
+      <div class="info-box" id="ep-info"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Principal (₹)</label><input id="ep-principal" type="number" oninput="epUpdateTotal()"></div>
+        <div class="form-group"><label>Interest (₹)</label><input id="ep-interest" type="number" oninput="epUpdateTotal()"></div>
+      </div>
+      <div class="form-group"><label>Total (₹)</label><input id="ep-total" readonly style="background:#F0EDE8;font-weight:500"></div>
+      <div class="form-group"><label>Note</label><input id="ep-note"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('edit-payment-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditPayment()"><i class="ti ti-check"></i> Update</button>
     </div>
   </div>
 </div>
@@ -231,73 +262,60 @@
 const MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 let cfg={};
 let allHouses=[];
-let lastPayment=null;
 
 function fmt(n){return Number(n).toLocaleString('en-IN');}
 function ml(m){const[y,mo]=m.split('-');return MO[parseInt(mo)-1]+' '+y;}
-function toast(msg, type='success'){
+function toast(msg,type='ok'){
   const t=document.getElementById('toast');
-  t.textContent = msg;
-  if(type === 'error'){
-    t.style.background = '#C0392B';
-  } else {
-    t.style.background = '#1A5C3A';
-  }
-  t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),3000);
+  t.textContent=msg;t.style.background=type==='error'?'#C0392B':'#1A5C3A';
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);
 }
-
 async function api(path,method='GET',body=null){
   const opts={method,headers:{'Content-Type':'application/json'}};
   if(body)opts.body=JSON.stringify(body);
-  const r=await fetch(path,opts);
-  return r.json();
+  return (await fetch(path,opts)).json();
 }
 
 async function loadSettings(){
   cfg=await api('/api/settings');
   document.getElementById('soc-name').textContent=cfg.name||'Society';
-  document.getElementById('sidebar-due').textContent=cfg.due_day||'5';
   document.getElementById('s-name').value=cfg.name||'';
   document.getElementById('s-amount').value=cfg.amount||'1500';
-  document.getElementById('s-dueday').value=cfg.due_day||'5';
-  document.getElementById('s-rate').value=cfg.rate||'2';
+  document.getElementById('s-rate').value=cfg.annual_rate||'24';
 }
-
 async function saveSettings(){
-  await api('/api/settings','POST',{
-    name:document.getElementById('s-name').value,
-    amount:document.getElementById('s-amount').value,
-    due_day:document.getElementById('s-dueday').value,
-    rate:document.getElementById('s-rate').value
-  });
-  await loadSettings();
-  toast('Settings saved!');
+  await api('/api/settings','POST',{name:document.getElementById('s-name').value,amount:document.getElementById('s-amount').value,annual_rate:document.getElementById('s-rate').value});
+  await loadSettings();toast('Settings saved!');
 }
 
 async function loadDashboard(){
   const d=await api('/api/dashboard');
+  const rate=cfg.annual_rate||'24';
   document.getElementById('metrics-grid').innerHTML=`
     <div class="metric accent"><div class="metric-label">Total Overdue</div><div class="metric-value">₹${fmt(d.total_due)}</div><div class="metric-sub">${d.overdue_count} houses</div></div>
-    <div class="metric"><div class="metric-label">Interest Accrued</div><div class="metric-value">₹${fmt(d.total_interest)}</div><div class="metric-sub">${cfg.rate||2}% / month</div></div>
+    <div class="metric"><div class="metric-label">Interest Accrued</div><div class="metric-value">₹${fmt(d.total_interest)}</div><div class="metric-sub">${rate}% p.a.</div></div>
     <div class="metric"><div class="metric-label">Collected This Month</div><div class="metric-value">₹${fmt(d.collected_this_month)}</div><div class="metric-sub">Current month</div></div>
     <div class="metric"><div class="metric-label">Total Houses</div><div class="metric-value">${d.house_count}</div><div class="metric-sub">${d.house_count-d.overdue_count} up to date</div></div>`;
   const ob=document.getElementById('overdue-body');
-  if(!d.overdue.length){ob.innerHTML='<tr><td colspan="7" class="empty">All houses are up to date!</td></tr>';}
-  else ob.innerHTML=d.overdue.map(x=>`<tr>
+  ob.innerHTML=d.overdue.length?d.overdue.map(x=>`<tr>
     <td><strong>${x.house_no}</strong></td><td>${x.owner}</td>
     <td>${x.months.length} month${x.months.length>1?'s':''} <span style="font-size:11px;color:var(--muted)">(${x.months.map(ml).join(', ')})</span></td>
     <td>₹${fmt(x.principal)}</td><td class="interest-amt">₹${fmt(x.interest)}</td>
     <td><strong>₹${fmt(x.total)}</strong></td>
     <td><button class="btn btn-primary btn-sm" onclick="quickPay(${x.house_id})">Pay</button></td>
-  </tr>`).join('');
+  </tr>`).join(''):'<tr><td colspan="7" class="empty">All houses are up to date!</td></tr>';
   const rb=document.getElementById('recent-body');
-  if(!d.recent_payments.length){rb.innerHTML='<tr><td colspan="5" class="empty">No payments yet</td></tr>';}
-  else rb.innerHTML=d.recent_payments.map(p=>`<tr>
-    <td>${p.date}</td><td>${p.no} <span style="font-size:11px;color:var(--muted)">${p.owner}</span></td>
-    <td>₹${fmt(p.total)}</td><td>${ml(p.month)}</td>
-    <td><span class="badge ${p.interest>0?'due':'ok'}">${p.interest>0?'Late':'On time'}</span></td>
-  </tr>`).join('');
+  rb.innerHTML=d.recent_payments.length?d.recent_payments.map(p=>{
+    const[yr,mo]=p.month.split('-').map(Number);
+    const grace=new Date(yr,mo-1,15);
+    const paid=new Date(p.date);
+    const late=paid>grace;
+    return`<tr>
+      <td>${p.date}</td><td>${p.no} <span style="font-size:11px;color:var(--muted)">${p.owner}</span></td>
+      <td>₹${fmt(p.total)}</td><td>${ml(p.month)}</td>
+      <td><span class="badge ${late?'due':'ok'}">${late?'Late':'On time'}</span></td>
+      <td><button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="deletePayment(${p.id})"><i class="ti ti-trash"></i></button></td>
+    </tr>`;}).join(''):'<tr><td colspan="6" class="empty">No payments yet</td></tr>';
 }
 
 async function loadHouses(){
@@ -305,15 +323,14 @@ async function loadHouses(){
   const d=await api('/api/dashboard');
   const overdueIds=new Set(d.overdue.map(x=>x.house_id));
   const tb=document.getElementById('houses-body');
-  if(!allHouses.length){tb.innerHTML='<tr><td colspan="6" class="empty">No houses added yet</td></tr>';return;}
-  tb.innerHTML=allHouses.map(h=>`<tr>
+  tb.innerHTML=allHouses.length?allHouses.map(h=>`<tr>
     <td><strong>${h.no}</strong></td><td>${h.owner}</td><td>${h.phone||'-'}</td>
     <td>₹${fmt(h.amount||cfg.amount||1500)}</td>
     <td><span class="badge ${overdueIds.has(h.id)?'over':'ok'}">${overdueIds.has(h.id)?'Overdue':'Paid'}</span></td>
     <td>
       <button class="btn btn-ghost btn-sm" onclick="editHouse(${h.id})"><i class="ti ti-edit"></i></button>
       <button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="deleteHouse(${h.id})"><i class="ti ti-trash"></i></button>
-    </td></tr>`).join('');
+    </td></tr>`).join(''):'<tr><td colspan="6" class="empty">No houses added yet</td></tr>';
 }
 
 async function renderLedger(){
@@ -326,7 +343,7 @@ async function renderLedger(){
   const total=data.reduce((s,p)=>s+p.total,0);
   document.getElementById('ledger-summary').textContent=`${data.length} records · ₹${fmt(total)} total`;
   const tb=document.getElementById('ledger-body');
-  if(!data.length){tb.innerHTML='<tr><td colspan="7" class="empty">No records found</td></tr>';return;}
+  if(!data.length){tb.innerHTML='<tr><td colspan="8" class="empty">No records found</td></tr>';return;}
   const hmap=Object.fromEntries(allHouses.map(h=>[h.id,h]));
   tb.innerHTML=data.map(p=>{
     const h=hmap[p.house_id]||{};
@@ -336,7 +353,11 @@ async function renderLedger(){
       <td>${ml(p.month)}</td><td>₹${fmt(p.principal)}</td>
       <td class="${p.interest>0?'interest-amt':''}">₹${fmt(p.interest)}</td>
       <td><strong>₹${fmt(p.total)}</strong></td>
-      <td><button class="btn btn-ghost btn-sm" onclick="showReceipt(${JSON.stringify(p).replace(/"/g,'&quot;')})"><i class="ti ti-receipt"></i></button></td>
+      <td><button class="btn btn-ghost btn-sm" onclick='showReceipt(${JSON.stringify(p).replace(/'/g,"&#39;")})' ><i class="ti ti-receipt"></i></button></td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-ghost btn-sm" onclick="openEditPayment(${p.id},${p.principal},${p.interest},'${p.note||''}','${p.month}','${p.date}')"><i class="ti ti-edit"></i></button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="deletePayment(${p.id})"><i class="ti ti-trash"></i></button>
+      </td>
     </tr>`;}).join('');
 }
 
@@ -345,8 +366,7 @@ async function populateLedgerFilters(){
   hs.innerHTML='<option value="">All Houses</option>'+allHouses.map(h=>`<option value="${h.id}">${h.no} — ${h.owner}</option>`).join('');
   const all=await api('/api/payments');
   const years=[...new Set(all.map(p=>p.month.split('-')[0]))].sort().reverse();
-  const ys=document.getElementById('filter-year');
-  ys.innerHTML='<option value="">All Years</option>'+years.map(y=>`<option value="${y}">${y}</option>`).join('');
+  document.getElementById('filter-year').innerHTML='<option value="">All Years</option>'+years.map(y=>`<option value="${y}">${y}</option>`).join('');
 }
 
 function openHouseModal(){
@@ -356,21 +376,16 @@ function openHouseModal(){
 }
 async function editHouse(id){
   const h=allHouses.find(x=>x.id===id);if(!h)return;
-  document.getElementById('h-id').value=h.id;
-  document.getElementById('h-no').value=h.no;
-  document.getElementById('h-owner').value=h.owner;
-  document.getElementById('h-phone').value=h.phone||'';
-  document.getElementById('h-email').value=h.email||'';
-  document.getElementById('h-amount').value=h.amount||'';
+  document.getElementById('h-id').value=h.id;document.getElementById('h-no').value=h.no;
+  document.getElementById('h-owner').value=h.owner;document.getElementById('h-phone').value=h.phone||'';
+  document.getElementById('h-email').value=h.email||'';document.getElementById('h-amount').value=h.amount||'';
   document.getElementById('h-since').value=h.since||'';
   document.getElementById('hm-title').textContent='Edit House';
   document.getElementById('house-modal').style.display='flex';
 }
 async function deleteHouse(id){
   if(!confirm('Delete this house?'))return;
-  await api(`/api/houses/${id}`,'DELETE');
-  toast('House deleted');
-  await loadHouses();
+  await api(`/api/houses/${id}`,'DELETE');toast('House deleted');await loadHouses();
 }
 async function saveHouse(){
   const no=document.getElementById('h-no').value.trim();
@@ -378,17 +393,8 @@ async function saveHouse(){
   if(!no||!owner){alert('House no. and owner are required.');return;}
   const id=document.getElementById('h-id').value;
   const body={no,owner,phone:document.getElementById('h-phone').value,email:document.getElementById('h-email').value,amount:parseFloat(document.getElementById('h-amount').value)||null,since:document.getElementById('h-since').value};
-  if(id){await api(`/api/houses/${id}`,'PUT',body);}
-  else{await api('/api/houses','POST',body);}
-  closeModal('house-modal');
-  await loadHouses();
-  await loadDashboard();
-  if(document.getElementById('view-ledger').classList.contains('active')){
-    await populateLedgerFilters();
-    await renderLedger();
-  }
-  toast('House saved!');
-  await loadHouses();
+  if(id){await api(`/api/houses/${id}`,'PUT',body);}else{await api('/api/houses','POST',body);}
+  closeModal('house-modal');toast('House saved!');await loadHouses();
 }
 
 async function openPaymentModal(houseId){
@@ -409,80 +415,78 @@ async function openPaymentModal(houseId){
 function quickPay(houseId){openPaymentModal(houseId);}
 function updateTotal(){
   const pr=parseFloat(document.getElementById('p-principal').value)||0;
-  const int=parseFloat(document.getElementById('p-interest').value)||0;
-  document.getElementById('p-total').value=(pr+int).toFixed(0);
+  document.getElementById('p-total').value=pr+(parseFloat(document.getElementById('p-interest').value)||0);
 }
 async function updatePaymentCalc(){
   const hid=document.getElementById('p-house').value;
   const month=document.getElementById('p-month').value;
-  const date=document.getElementById('p-date').value;
-  if(!hid||!month||!date){document.getElementById('int-preview').style.display='none';return;}
-  const d=await api(`/api/calc_interest?house_id=${hid}&month=${month}&date=${date}`);
+  const dt=document.getElementById('p-date').value;
+  const prev=document.getElementById('int-preview');
+  if(!hid||!month||!dt){prev.style.display='none';return;}
+  const d=await api(`/api/calc_interest?house_id=${hid}&month=${month}&date=${dt}`);
   document.getElementById('p-principal').value=d.principal;
   document.getElementById('p-interest').value=d.interest;
   document.getElementById('p-total').value=d.total;
-  const prev=document.getElementById('int-preview');
-  if(d.interest>0){
-    prev.style.display='block';
-    prev.innerHTML=`<strong>Late payment</strong> — Interest at ${d.rate}%/month = ₹${fmt(d.interest)}`;
-  }else prev.style.display='none';
+  prev.style.display='block';
+  if(d.on_time){
+    prev.className='info-box';
+    prev.innerHTML=`✅ <strong>Within grace period</strong> — No interest charged (paid on or before 15th).`;
+  }else{
+    prev.className='warn-box';
+    prev.innerHTML=`⚠️ <strong>Late payment</strong> — paid after 15th grace period.<br>
+      Interest: ₹${fmt(d.principal)} × ${d.monthly_rate}% × ${d.months_late} month${d.months_late>1?'s':''} = <strong>₹${fmt(d.interest)}</strong>`;
+  }
 }
 async function savePayment(){
-  const hid = parseInt(document.getElementById('p-house').value);
-  const month = document.getElementById('p-month').value;
-  const date = document.getElementById('p-date').value;
-
-  if(!hid || !month || !date){
-    alert('Please fill all fields.');
-    return;
-  }
-
-  const interest = parseFloat(document.getElementById('p-interest').value) || 0;
-
-  const p = await api('/api/payments','POST',{
-    house_id: hid,
-    month,
-    date,
-    interest,
-    note: document.getElementById('p-note').value
-  });
-  console.log("Payment saved:", p);
-  if (p.error) {
-    toast(p.error,  'error');
-    return;
-  }
-
+  const hid=parseInt(document.getElementById('p-house').value);
+  const month=document.getElementById('p-month').value;
+  const dt=document.getElementById('p-date').value;
+  if(!hid||!month||!dt){alert('Please fill all fields.');return;}
+  const interest=parseFloat(document.getElementById('p-interest').value)||0;
+  const p=await api('/api/payments','POST',{house_id:hid,month,date:dt,interest,note:document.getElementById('p-note').value});
+  if(p.error){toast(p.error,'error');return;}
   closeModal('payment-modal');
-
-  // Refresh all views immediately
-  console.log("Refreshing dashboard...");
+  allHouses=await api('/api/houses');
   await loadDashboard();
-
-  console.log("Dashboard refreshed");
-  await loadHouses();
-  console.log("Houses refreshed");
-
-  // Refresh ledger if currently open
-  const ledgerView = document.getElementById('view-ledger');
-  if (ledgerView && ledgerView.classList.contains('active')) {
-    await renderLedger();
-  }
-
-  lastPayment = {
-    ...p,
-    house_id: hid,
-    month,
-    date,
-    note: document.getElementById('p-note').value
-  };
-
-  showReceipt(lastPayment);
+  showReceipt({...p,house_id:hid,month,date:dt,note:document.getElementById('p-note').value});
   toast('Payment saved!');
+}
+
+async function deletePayment(pid){
+  if(!confirm('Delete this payment? This cannot be undone.'))return;
+  await api(`/api/payments/${pid}`,'DELETE');
+  toast('Payment deleted');await loadDashboard();
+  if(document.getElementById('view-ledger').classList.contains('active')) await renderLedger();
+}
+
+function openEditPayment(pid,principal,interest,note,month,date){
+  document.getElementById('ep-id').value=pid;
+  document.getElementById('ep-info').innerHTML=`Payment #${String(pid).padStart(4,'0')} &nbsp;·&nbsp; ${ml(month)} &nbsp;·&nbsp; ${date}`;
+  document.getElementById('ep-principal').value=principal;
+  document.getElementById('ep-interest').value=interest;
+  document.getElementById('ep-total').value=principal+interest;
+  document.getElementById('ep-note').value=note||'';
+  document.getElementById('edit-payment-modal').style.display='flex';
+}
+function epUpdateTotal(){
+  document.getElementById('ep-total').value=(parseFloat(document.getElementById('ep-principal').value)||0)+(parseFloat(document.getElementById('ep-interest').value)||0);
+}
+async function saveEditPayment(){
+  const pid=parseInt(document.getElementById('ep-id').value);
+  const principal=parseFloat(document.getElementById('ep-principal').value)||0;
+  const interest=parseFloat(document.getElementById('ep-interest').value)||0;
+  await api(`/api/payments/${pid}`,'PUT',{principal,interest,note:document.getElementById('ep-note').value});
+  closeModal('edit-payment-modal');toast('Payment updated!');
+  await loadDashboard();
+  if(document.getElementById('view-ledger').classList.contains('active')) await renderLedger();
 }
 
 function showReceipt(p){
   const h=allHouses.find(x=>x.id===p.house_id)||{};
   const socName=document.getElementById('soc-name').textContent;
+  const[yr,mo]=p.month.split('-').map(Number);
+  const grace=new Date(yr,mo-1,15);
+  const onTime=new Date(p.date)<=grace;
   document.getElementById('receipt-content').innerHTML=`
     <div class="receipt">
       <div style="text-align:center;margin-bottom:12px">
@@ -492,11 +496,12 @@ function showReceipt(p){
       <hr class="receipt-divider">
       <div class="receipt-row"><span>House</span><strong>${h.no||'-'}</strong></div>
       <div class="receipt-row"><span>Owner</span><span>${h.owner||'-'}</span></div>
-      <div class="receipt-row"><span>For Month</span><span>${ml(p.month)}</span></div>
+      <div class="receipt-row"><span>Demand Month</span><span>${ml(p.month)}</span></div>
       <div class="receipt-row"><span>Payment Date</span><span>${p.date}</span></div>
+      <div class="receipt-row"><span>Status</span><span style="color:${onTime?'#1A5C3A':'#C0392B'}">${onTime?'✓ On Time':'⚠ Late (after 15th)'}</span></div>
       <hr class="receipt-divider">
       <div class="receipt-row"><span>Maintenance</span><span>₹${fmt(p.principal)}</span></div>
-      ${p.interest>0?`<div class="receipt-row"><span>Late Interest</span><span style="color:var(--warn)">₹${fmt(p.interest)}</span></div>`:''}
+      ${p.interest>0?`<div class="receipt-row"><span>Late Interest (${cfg.annual_rate||24}% p.a.)</span><span style="color:var(--warn)">₹${fmt(p.interest)}</span></div>`:''}
       <hr class="receipt-divider">
       <div class="receipt-row" style="font-weight:500;font-size:13px"><span>Total Paid</span><span>₹${fmt(p.total)}</span></div>
       ${p.note?`<div style="margin-top:8px;font-size:11px;color:var(--muted)">Note: ${p.note}</div>`:''}
@@ -510,13 +515,9 @@ async function exportCSV(){
   const data=await api('/api/payments');
   const hmap=Object.fromEntries(allHouses.map(h=>[h.id,h]));
   const rows=[['Date','House','Owner','Month','Principal','Interest','Total','Note']];
-  data.forEach(p=>{
-    const h=hmap[p.house_id]||{};
-    rows.push([p.date,h.no||'',h.owner||'',ml(p.month),p.principal,p.interest,p.total,p.note||'']);
-  });
-  const csv=rows.map(r=>r.join(',')).join('\n');
+  data.forEach(p=>{const h=hmap[p.house_id]||{};rows.push([p.date,h.no||'',h.owner||'',ml(p.month),p.principal,p.interest,p.total,p.note||'']);});
   const a=document.createElement('a');
-  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(rows.map(r=>r.join(',')).join('\n'));
   a.download='ledger.csv';a.click();
 }
 
@@ -525,8 +526,7 @@ async function showView(v){
   document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
   document.getElementById('view-'+v).classList.add('active');
   document.getElementById('nav-'+v).classList.add('active');
-  const titles={dashboard:'Dashboard',houses:'Houses',ledger:'Ledger',settings:'Settings'};
-  document.getElementById('page-title').textContent=titles[v];
+  document.getElementById('page-title').textContent={dashboard:'Dashboard',houses:'Houses',ledger:'Ledger',settings:'Settings'}[v];
   if(v==='dashboard') await loadDashboard();
   if(v==='houses') await loadHouses();
   if(v==='ledger'){allHouses=await api('/api/houses');await populateLedgerFilters();await renderLedger();}
