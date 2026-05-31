@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SocietyLedger</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#F7F5F0;--card:#FFF;--accent:#1A5C3A;--accent2:#E8F5EE;--accent3:#2E7D52;
+    --text:#1C1C1A;--muted:#6B6B67;--border:#E2DDD5;--danger:#C0392B;--warn:#E67E22;
+    --font-head:'DM Serif Display',serif;--font-body:'DM Sans',sans-serif;
+  }
+  body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+  h1,h2,h3{font-family:var(--font-head);font-weight:400}
+  .shell{display:flex;min-height:100vh}
+  .sidebar{width:220px;background:var(--accent);display:flex;flex-direction:column;flex-shrink:0}
+  .sidebar-logo{padding:28px 20px 20px;border-bottom:1px solid rgba(255,255,255,.12)}
+  .sidebar-logo h2{color:#fff;font-size:18px;line-height:1.2}
+  .sidebar-logo p{color:rgba(255,255,255,.55);font-size:11px;margin-top:4px}
+  .nav{padding:16px 0;flex:1}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;color:rgba(255,255,255,.65);cursor:pointer;font-size:13px;transition:all .15s;border-left:3px solid transparent}
+  .nav-item:hover{background:rgba(255,255,255,.08);color:#fff}
+  .nav-item.active{background:rgba(255,255,255,.12);color:#fff;border-left-color:#7ECBA1}
+  .nav-item i{font-size:16px}
+  .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  .topbar{padding:20px 28px;background:var(--card);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+  .topbar-title{font-size:20px;font-family:var(--font-head)}
+  .content{padding:24px 28px;overflow-y:auto;flex:1}
+  .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+  .metric{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px}
+  .metric-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
+  .metric-value{font-size:26px;font-family:var(--font-head);line-height:1}
+  .metric-sub{font-size:11px;color:var(--muted);margin-top:4px}
+  .metric.accent{background:var(--accent);border-color:var(--accent)}
+  .metric.accent .metric-label,.metric.accent .metric-sub{color:rgba(255,255,255,.6)}
+  .metric.accent .metric-value{color:#fff}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px}
+  .card-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+  .card-head h3{font-size:15px}
+  table{width:100%;border-collapse:collapse}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:10px 16px;text-align:left;background:#FAFAF8;border-bottom:1px solid var(--border);font-weight:500}
+  td{padding:11px 16px;border-bottom:1px solid var(--border);font-size:13px}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:#FAFAF8}
+  .badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500}
+  .badge.ok{background:#E8F8EF;color:#1A6E3C}
+  .badge.due{background:#FEF3E2;color:#9B5E0A}
+  .badge.over{background:#FDECEA;color:#9B2222}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:7px;border:none;cursor:pointer;font-family:var(--font-body);font-size:13px;transition:all .15s}
+  .btn-primary{background:var(--accent);color:#fff}
+  .btn-primary:hover{background:var(--accent3)}
+  .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+  .btn-ghost:hover{background:#F0EDE8}
+  .btn-sm{padding:5px 10px;font-size:12px}
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:100}
+  .modal{background:var(--card);border-radius:12px;width:440px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.15)}
+  .modal-head{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+  .modal-head h3{font-size:16px}
+  .modal-body{padding:20px 24px}
+  .modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end}
+  .form-group{margin-bottom:14px}
+  .form-group label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:500;letter-spacing:.3px}
+  .form-group input,.form-group select{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:7px;font-family:var(--font-body);font-size:13px;background:var(--bg);color:var(--text);outline:none}
+  .form-group input:focus,.form-group select:focus{border-color:var(--accent3);box-shadow:0 0 0 2px #E8F5EE}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .info-box{background:var(--accent2);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--accent);margin-bottom:14px;line-height:1.6}
+  .view{display:none}.view.active{display:block}
+  .int-row td{background:#FFFBF5}
+  .interest-amt{color:var(--warn);font-weight:500}
+  .filter-bar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+  .filter-bar select,.filter-bar input{padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;background:var(--card);font-family:var(--font-body);color:var(--text);outline:none}
+  .empty{text-align:center;padding:40px;color:var(--muted);font-size:13px}
+  .receipt{background:#FFFEF9;border:1px dashed var(--border);border-radius:8px;padding:16px;font-size:12px;line-height:1.9}
+  .receipt-row{display:flex;justify-content:space-between}
+  .receipt-divider{border:none;border-top:1px dashed var(--border);margin:8px 0}
+  .toast{position:fixed;bottom:24px;right:24px;background:var(--accent);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:999;opacity:0;transition:opacity .3s}
+  .toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="sidebar">
+    <div class="sidebar-logo"><h2>SocietyLedger</h2><p id="soc-name">Loading…</p></div>
+    <nav class="nav">
+      <div class="nav-item active" onclick="showView('dashboard')" id="nav-dashboard"><i class="ti ti-layout-dashboard"></i> Dashboard</div>
+      <div class="nav-item" onclick="showView('houses')" id="nav-houses"><i class="ti ti-home"></i> Houses</div>
+      <div class="nav-item" onclick="showView('ledger')" id="nav-ledger"><i class="ti ti-book"></i> Ledger</div>
+      <div class="nav-item" onclick="showView('settings')" id="nav-settings"><i class="ti ti-settings"></i> Settings</div>
+    </nav>
+    <div style="padding:16px 20px;border-top:1px solid rgba(255,255,255,.1)">
+      <div style="font-size:11px;color:rgba(255,255,255,.4)">Due date: <span id="sidebar-due">5th</span> of month</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-title" id="page-title">Dashboard</span>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary btn-sm" onclick="openPaymentModal()"><i class="ti ti-plus"></i> Record Payment</button>
+        <button class="btn btn-ghost btn-sm" onclick="openHouseModal()"><i class="ti ti-home"></i> Add House</button>
+      </div>
+    </div>
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div class="view active" id="view-dashboard">
+        <div class="metrics" id="metrics-grid"></div>
+        <div class="card">
+          <div class="card-head"><h3>Overdue &amp; Pending</h3></div>
+          <table><thead><tr><th>House</th><th>Owner</th><th>Overdue Months</th><th>Principal (₹)</th><th>Interest (₹)</th><th>Total Due (₹)</th><th></th></tr></thead>
+          <tbody id="overdue-body"></tbody></table>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Recent Payments</h3></div>
+          <table><thead><tr><th>Date</th><th>House</th><th>Amount (₹)</th><th>Month</th><th>Status</th></tr></thead>
+          <tbody id="recent-body"></tbody></table>
+        </div>
+      </div>
+
+      <!-- HOUSES -->
+      <div class="view" id="view-houses">
+        <div class="card">
+          <div class="card-head"><h3>All Houses</h3><button class="btn btn-primary btn-sm" onclick="openHouseModal()"><i class="ti ti-plus"></i> Add House</button></div>
+          <table><thead><tr><th>House No.</th><th>Owner</th><th>Phone</th><th>Monthly (₹)</th><th>Status</th><th></th></tr></thead>
+          <tbody id="houses-body"></tbody></table>
+        </div>
+      </div>
+
+      <!-- LEDGER -->
+      <div class="view" id="view-ledger">
+        <div class="filter-bar">
+          <select id="filter-house" onchange="renderLedger()"><option value="">All Houses</option></select>
+          <select id="filter-year" onchange="renderLedger()"><option value="">All Years</option></select>
+          <button class="btn btn-ghost btn-sm" onclick="exportCSV()"><i class="ti ti-download"></i> Export CSV</button>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Payment Ledger</h3><span id="ledger-summary" style="font-size:12px;color:var(--muted)"></span></div>
+          <table><thead><tr><th>Date</th><th>House</th><th>Month</th><th>Principal (₹)</th><th>Interest (₹)</th><th>Total (₹)</th><th>Receipt</th></tr></thead>
+          <tbody id="ledger-body"></tbody></table>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="view" id="view-settings">
+        <div class="card" style="max-width:480px">
+          <div class="card-head"><h3>Society Settings</h3></div>
+          <div class="modal-body">
+            <div class="form-group"><label>Society Name</label><input id="s-name"></div>
+            <div class="form-row">
+              <div class="form-group"><label>Monthly Maintenance (₹)</label><input id="s-amount" type="number"></div>
+              <div class="form-group"><label>Due Day of Month</label><input id="s-dueday" type="number" min="1" max="28"></div>
+            </div>
+            <div class="form-group"><label>Interest Rate (% per month)</label><input id="s-rate" type="number" step="0.1"></div>
+            <div class="info-box">Interest = Overdue Amount × Rate% × (Days Late / 30)</div>
+            <button class="btn btn-primary" onclick="saveSettings()"><i class="ti ti-check"></i> Save Settings</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- House Modal -->
+<div class="modal-bg" id="house-modal" style="display:none">
+  <div class="modal">
+    <div class="modal-head"><h3 id="hm-title">Add House</h3><button class="btn btn-ghost btn-sm" onclick="closeModal('house-modal')"><i class="ti ti-x"></i></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="h-id">
+      <div class="form-row">
+        <div class="form-group"><label>House / Flat No.</label><input id="h-no" placeholder="e.g. A-101"></div>
+        <div class="form-group"><label>Owner Name</label><input id="h-owner"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Phone</label><input id="h-phone"></div>
+        <div class="form-group"><label>Email (optional)</label><input id="h-email"></div>
+      </div>
+      <div class="form-group"><label>Monthly Amount (₹) — blank = society default</label><input id="h-amount" type="number"></div>
+      <div class="form-group"><label>Member Since</label><input id="h-since" type="month"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('house-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveHouse()"><i class="ti ti-check"></i> Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Payment Modal -->
+<div class="modal-bg" id="payment-modal" style="display:none">
+  <div class="modal">
+    <div class="modal-head"><h3>Record Payment</h3><button class="btn btn-ghost btn-sm" onclick="closeModal('payment-modal')"><i class="ti ti-x"></i></button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>House</label><select id="p-house"><option value="">Select…</option></select></div>
+      <div class="form-row">
+        <div class="form-group"><label>For Month</label><input id="p-month" type="month"></div>
+        <div class="form-group"><label>Payment Date</label><input id="p-date" type="date"></div>
+      </div>
+      <div id="int-preview" class="info-box" style="display:none"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Principal (₹)</label><input id="p-principal" readonly style="background:#F0EDE8"></div>
+        <div class="form-group"><label>Interest (₹)</label><input id="p-interest" type="number" value="0" oninput="updateTotal()"></div>
+      </div>
+      <div class="form-group"><label>Total (₹)</label><input id="p-total" readonly style="background:#F0EDE8;font-weight:500"></div>
+      <div class="form-group"><label>Note</label><input id="p-note" placeholder="e.g. Cash, Online…"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('payment-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="savePayment()"><i class="ti ti-receipt"></i> Save &amp; Receipt</button>
+    </div>
+  </div>
+</div>
+
+<!-- Receipt Modal -->
+<div class="modal-bg" id="receipt-modal" style="display:none">
+  <div class="modal" style="width:360px">
+    <div class="modal-head"><h3>Receipt</h3><button class="btn btn-ghost btn-sm" onclick="closeModal('receipt-modal')"><i class="ti ti-x"></i></button></div>
+    <div class="modal-body" id="receipt-content"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('receipt-modal')">Close</button>
+      <button class="btn btn-primary btn-sm" onclick="window.print()"><i class="ti ti-printer"></i> Print</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+let cfg={};
+let allHouses=[];
+let lastPayment=null;
+
+function fmt(n){return Number(n).toLocaleString('en-IN');}
+function ml(m){const[y,mo]=m.split('-');return MO[parseInt(mo)-1]+' '+y;}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+async function api(path,method='GET',body=null){
+  const opts={method,headers:{'Content-Type':'application/json'}};
+  if(body)opts.body=JSON.stringify(body);
+  const r=await fetch(path,opts);
+  return r.json();
+}
+
+async function loadSettings(){
+  cfg=await api('/api/settings');
+  document.getElementById('soc-name').textContent=cfg.name||'Society';
+  document.getElementById('sidebar-due').textContent=cfg.due_day||'5';
+  document.getElementById('s-name').value=cfg.name||'';
+  document.getElementById('s-amount').value=cfg.amount||'1500';
+  document.getElementById('s-dueday').value=cfg.due_day||'5';
+  document.getElementById('s-rate').value=cfg.rate||'2';
+}
+
+async function saveSettings(){
+  await api('/api/settings','POST',{
+    name:document.getElementById('s-name').value,
+    amount:document.getElementById('s-amount').value,
+    due_day:document.getElementById('s-dueday').value,
+    rate:document.getElementById('s-rate').value
+  });
+  await loadSettings();
+  toast('Settings saved!');
+}
+
+async function loadDashboard(){
+  const d=await api('/api/dashboard');
+  document.getElementById('metrics-grid').innerHTML=`
+    <div class="metric accent"><div class="metric-label">Total Overdue</div><div class="metric-value">₹${fmt(d.total_due)}</div><div class="metric-sub">${d.overdue_count} houses</div></div>
+    <div class="metric"><div class="metric-label">Interest Accrued</div><div class="metric-value">₹${fmt(d.total_interest)}</div><div class="metric-sub">${cfg.rate||2}% / month</div></div>
+    <div class="metric"><div class="metric-label">Collected This Month</div><div class="metric-value">₹${fmt(d.collected_this_month)}</div><div class="metric-sub">Current month</div></div>
+    <div class="metric"><div class="metric-label">Total Houses</div><div class="metric-value">${d.house_count}</div><div class="metric-sub">${d.house_count-d.overdue_count} up to date</div></div>`;
+  const ob=document.getElementById('overdue-body');
+  if(!d.overdue.length){ob.innerHTML='<tr><td colspan="7" class="empty">All houses are up to date!</td></tr>';}
+  else ob.innerHTML=d.overdue.map(x=>`<tr>
+    <td><strong>${x.house_no}</strong></td><td>${x.owner}</td>
+    <td>${x.months.length} month${x.months.length>1?'s':''} <span style="font-size:11px;color:var(--muted)">(${x.months.map(ml).join(', ')})</span></td>
+    <td>₹${fmt(x.principal)}</td><td class="interest-amt">₹${fmt(x.interest)}</td>
+    <td><strong>₹${fmt(x.total)}</strong></td>
+    <td><button class="btn btn-primary btn-sm" onclick="quickPay(${x.house_id})">Pay</button></td>
+  </tr>`).join('');
+  const rb=document.getElementById('recent-body');
+  if(!d.recent_payments.length){rb.innerHTML='<tr><td colspan="5" class="empty">No payments yet</td></tr>';}
+  else rb.innerHTML=d.recent_payments.map(p=>`<tr>
+    <td>${p.date}</td><td>${p.no} <span style="font-size:11px;color:var(--muted)">${p.owner}</span></td>
+    <td>₹${fmt(p.total)}</td><td>${ml(p.month)}</td>
+    <td><span class="badge ${p.interest>0?'due':'ok'}">${p.interest>0?'Late':'On time'}</span></td>
+  </tr>`).join('');
+}
+
+async function loadHouses(){
+  allHouses=await api('/api/houses');
+  const d=await api('/api/dashboard');
+  const overdueIds=new Set(d.overdue.map(x=>x.house_id));
+  const tb=document.getElementById('houses-body');
+  if(!allHouses.length){tb.innerHTML='<tr><td colspan="6" class="empty">No houses added yet</td></tr>';return;}
+  tb.innerHTML=allHouses.map(h=>`<tr>
+    <td><strong>${h.no}</strong></td><td>${h.owner}</td><td>${h.phone||'-'}</td>
+    <td>₹${fmt(h.amount||cfg.amount||1500)}</td>
+    <td><span class="badge ${overdueIds.has(h.id)?'over':'ok'}">${overdueIds.has(h.id)?'Overdue':'Paid'}</span></td>
+    <td>
+      <button class="btn btn-ghost btn-sm" onclick="editHouse(${h.id})"><i class="ti ti-edit"></i></button>
+      <button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="deleteHouse(${h.id})"><i class="ti ti-trash"></i></button>
+    </td></tr>`).join('');
+}
+
+async function renderLedger(){
+  const hf=document.getElementById('filter-house').value;
+  const yf=document.getElementById('filter-year').value;
+  let url='/api/payments?';
+  if(hf)url+=`house_id=${hf}&`;
+  if(yf)url+=`year=${yf}`;
+  const data=await api(url);
+  const total=data.reduce((s,p)=>s+p.total,0);
+  document.getElementById('ledger-summary').textContent=`${data.length} records · ₹${fmt(total)} total`;
+  const tb=document.getElementById('ledger-body');
+  if(!data.length){tb.innerHTML='<tr><td colspan="7" class="empty">No records found</td></tr>';return;}
+  const hmap=Object.fromEntries(allHouses.map(h=>[h.id,h]));
+  tb.innerHTML=data.map(p=>{
+    const h=hmap[p.house_id]||{};
+    return`<tr ${p.interest>0?'class="int-row"':''}>
+      <td>${p.date}</td>
+      <td>${h.no||'-'}<br><span style="font-size:11px;color:var(--muted)">${h.owner||''}</span></td>
+      <td>${ml(p.month)}</td><td>₹${fmt(p.principal)}</td>
+      <td class="${p.interest>0?'interest-amt':''}">₹${fmt(p.interest)}</td>
+      <td><strong>₹${fmt(p.total)}</strong></td>
+      <td><button class="btn btn-ghost btn-sm" onclick="showReceipt(${JSON.stringify(p).replace(/"/g,'&quot;')})"><i class="ti ti-receipt"></i></button></td>
+    </tr>`;}).join('');
+}
+
+async function populateLedgerFilters(){
+  const hs=document.getElementById('filter-house');
+  hs.innerHTML='<option value="">All Houses</option>'+allHouses.map(h=>`<option value="${h.id}">${h.no} — ${h.owner}</option>`).join('');
+  const all=await api('/api/payments');
+  const years=[...new Set(all.map(p=>p.month.split('-')[0]))].sort().reverse();
+  const ys=document.getElementById('filter-year');
+  ys.innerHTML='<option value="">All Years</option>'+years.map(y=>`<option value="${y}">${y}</option>`).join('');
+}
+
+function openHouseModal(){
+  ['h-id','h-no','h-owner','h-phone','h-email','h-amount','h-since'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('hm-title').textContent='Add House';
+  document.getElementById('house-modal').style.display='flex';
+}
+async function editHouse(id){
+  const h=allHouses.find(x=>x.id===id);if(!h)return;
+  document.getElementById('h-id').value=h.id;
+  document.getElementById('h-no').value=h.no;
+  document.getElementById('h-owner').value=h.owner;
+  document.getElementById('h-phone').value=h.phone||'';
+  document.getElementById('h-email').value=h.email||'';
+  document.getElementById('h-amount').value=h.amount||'';
+  document.getElementById('h-since').value=h.since||'';
+  document.getElementById('hm-title').textContent='Edit House';
+  document.getElementById('house-modal').style.display='flex';
+}
+async function deleteHouse(id){
+  if(!confirm('Delete this house?'))return;
+  await api(`/api/houses/${id}`,'DELETE');
+  toast('House deleted');
+  await loadHouses();
+}
+async function saveHouse(){
+  const no=document.getElementById('h-no').value.trim();
+  const owner=document.getElementById('h-owner').value.trim();
+  if(!no||!owner){alert('House no. and owner are required.');return;}
+  const id=document.getElementById('h-id').value;
+  const body={no,owner,phone:document.getElementById('h-phone').value,email:document.getElementById('h-email').value,amount:parseFloat(document.getElementById('h-amount').value)||null,since:document.getElementById('h-since').value};
+  if(id){await api(`/api/houses/${id}`,'PUT',body);}
+  else{await api('/api/houses','POST',body);}
+  closeModal('house-modal');
+  toast('House saved!');
+  await loadHouses();
+}
+
+async function openPaymentModal(houseId){
+  allHouses=await api('/api/houses');
+  const sel=document.getElementById('p-house');
+  sel.innerHTML='<option value="">Select house…</option>'+allHouses.map(h=>`<option value="${h.id}">${h.no} — ${h.owner}</option>`).join('');
+  if(houseId)sel.value=houseId;
+  const now=new Date();
+  document.getElementById('p-month').value=now.toISOString().slice(0,7);
+  document.getElementById('p-date').value=now.toISOString().slice(0,10);
+  document.getElementById('p-note').value='';
+  await updatePaymentCalc();
+  sel.oninput=updatePaymentCalc;
+  document.getElementById('p-month').oninput=updatePaymentCalc;
+  document.getElementById('p-date').oninput=updatePaymentCalc;
+  document.getElementById('payment-modal').style.display='flex';
+}
+function quickPay(houseId){openPaymentModal(houseId);}
+function updateTotal(){
+  const pr=parseFloat(document.getElementById('p-principal').value)||0;
+  const int=parseFloat(document.getElementById('p-interest').value)||0;
+  document.getElementById('p-total').value=(pr+int).toFixed(0);
+}
+async function updatePaymentCalc(){
+  const hid=document.getElementById('p-house').value;
+  const month=document.getElementById('p-month').value;
+  const date=document.getElementById('p-date').value;
+  if(!hid||!month||!date){document.getElementById('int-preview').style.display='none';return;}
+  const d=await api(`/api/calc_interest?house_id=${hid}&month=${month}&date=${date}`);
+  document.getElementById('p-principal').value=d.principal;
+  document.getElementById('p-interest').value=d.interest;
+  document.getElementById('p-total').value=d.total;
+  const prev=document.getElementById('int-preview');
+  if(d.interest>0){
+    prev.style.display='block';
+    prev.innerHTML=`<strong>Late payment</strong> — Interest at ${d.rate}%/month = ₹${fmt(d.interest)}`;
+  }else prev.style.display='none';
+}
+async function savePayment(){
+  const hid=parseInt(document.getElementById('p-house').value);
+  const month=document.getElementById('p-month').value;
+  const date=document.getElementById('p-date').value;
+  if(!hid||!month||!date){alert('Please fill all fields.');return;}
+  const interest=parseFloat(document.getElementById('p-interest').value)||0;
+  const p=await api('/api/payments','POST',{house_id:hid,month,date,interest,note:document.getElementById('p-note').value});
+  closeModal('payment-modal');
+  lastPayment={...p,house_id:hid,month,date,note:document.getElementById('p-note').value};
+  showReceipt(lastPayment);
+  toast('Payment saved!');
+}
+
+function showReceipt(p){
+  const h=allHouses.find(x=>x.id===p.house_id)||{};
+  const socName=document.getElementById('soc-name').textContent;
+  document.getElementById('receipt-content').innerHTML=`
+    <div class="receipt">
+      <div style="text-align:center;margin-bottom:12px">
+        <div style="font-family:var(--font-head);font-size:17px">${socName}</div>
+        <div style="font-size:11px;color:var(--muted)">Maintenance Receipt #${String(p.id).padStart(4,'0')}</div>
+      </div>
+      <hr class="receipt-divider">
+      <div class="receipt-row"><span>House</span><strong>${h.no||'-'}</strong></div>
+      <div class="receipt-row"><span>Owner</span><span>${h.owner||'-'}</span></div>
+      <div class="receipt-row"><span>For Month</span><span>${ml(p.month)}</span></div>
+      <div class="receipt-row"><span>Payment Date</span><span>${p.date}</span></div>
+      <hr class="receipt-divider">
+      <div class="receipt-row"><span>Maintenance</span><span>₹${fmt(p.principal)}</span></div>
+      ${p.interest>0?`<div class="receipt-row"><span>Late Interest</span><span style="color:var(--warn)">₹${fmt(p.interest)}</span></div>`:''}
+      <hr class="receipt-divider">
+      <div class="receipt-row" style="font-weight:500;font-size:13px"><span>Total Paid</span><span>₹${fmt(p.total)}</span></div>
+      ${p.note?`<div style="margin-top:8px;font-size:11px;color:var(--muted)">Note: ${p.note}</div>`:''}
+    </div>`;
+  document.getElementById('receipt-modal').style.display='flex';
+}
+
+function closeModal(id){document.getElementById(id).style.display='none';}
+
+async function exportCSV(){
+  const data=await api('/api/payments');
+  const hmap=Object.fromEntries(allHouses.map(h=>[h.id,h]));
+  const rows=[['Date','House','Owner','Month','Principal','Interest','Total','Note']];
+  data.forEach(p=>{
+    const h=hmap[p.house_id]||{};
+    rows.push([p.date,h.no||'',h.owner||'',ml(p.month),p.principal,p.interest,p.total,p.note||'']);
+  });
+  const csv=rows.map(r=>r.join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='ledger.csv';a.click();
+}
+
+async function showView(v){
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  document.getElementById('nav-'+v).classList.add('active');
+  const titles={dashboard:'Dashboard',houses:'Houses',ledger:'Ledger',settings:'Settings'};
+  document.getElementById('page-title').textContent=titles[v];
+  if(v==='dashboard') await loadDashboard();
+  if(v==='houses') await loadHouses();
+  if(v==='ledger'){allHouses=await api('/api/houses');await populateLedgerFilters();await renderLedger();}
+}
+
+(async()=>{await loadSettings();await showView('dashboard');})();
+</script>
+</body>
+</html>
