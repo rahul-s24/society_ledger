@@ -381,6 +381,12 @@ async function saveHouse(){
   if(id){await api(`/api/houses/${id}`,'PUT',body);}
   else{await api('/api/houses','POST',body);}
   closeModal('house-modal');
+  await loadHouses();
+  await loadDashboard();
+  if(document.getElementById('view-ledger').classList.contains('active')){
+    await populateLedgerFilters();
+    await renderLedger();
+  }
   toast('House saved!');
   await loadHouses();
 }
