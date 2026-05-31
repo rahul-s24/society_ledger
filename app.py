@@ -12,6 +12,8 @@ from datetime import date, datetime
 app = Flask(__name__)
 DB = "ledger.db"
 
+init_db()
+
 
 # ── Database setup ────────────────────────────────────────────────────────────
 
@@ -291,6 +293,5 @@ def api_calc_interest():
 
 
 if __name__ == "__main__":
-    init_db()
     print("\n✅  SocietyLedger running → http://localhost:5000\n")
     app.run(debug=True)
